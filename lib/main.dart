@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 void main() => runApp(MyApp());
 
@@ -13,94 +14,77 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: CircleWaveRoute(),
+      home: MaybeCircle(),
     );
   }
 }
 
-class CircleWaveRoute extends StatefulWidget {
-  @override
-  _CircleWaveRouteState createState() => _CircleWaveRouteState();
-}
-
-class _CircleWaveRouteState extends State<CircleWaveRoute>
-    with SingleTickerProviderStateMixin {
-  double waveRadius = 2.0;
-  double waveGap = 10.0;
-  Animation<double> _animation;
-  AnimationController controller;
-
-  @override
-  void initState() {
-    super.initState();
-    controller = AnimationController(
-        duration: Duration(milliseconds: 20000), vsync: this);
-
-    controller.forward();
-
-    controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        controller.reset();
-      } else if (status == AnimationStatus.dismissed) {
-        controller.forward();
-      }
-    });
-  }
-
+class MaybeCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    _animation = Tween(begin: 0.0, end: waveGap).animate(controller)
-      ..addListener(() {
-        setState(() {
-          waveRadius = _animation.value;
-        });
-      });
-
     return Scaffold(
-      backgroundColor: Colors.white,
       body: CustomPaint(
-        size: Size(double.infinity, double.infinity),
-        painter: CircleWavePainter(waveRadius),
+        painter: Sky(),
+        child: Center(
+          child: Text(
+            'Once upon a time...',
+            style: const TextStyle(
+              fontSize: 40.0,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFFFFFFFF),
+            ),
+          ),
+        ),
       ),
     );
   }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
 }
 
-class CircleWavePainter extends CustomPainter {
-  final double waveRadius;
-  var wavePaint;
-  CircleWavePainter(this.waveRadius) {
-    wavePaint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5.0
-      ..isAntiAlias = true;
-  }
+class Sky extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    double centerX = size.width / 2.0;
-    double centerY = size.height / 2.0;
-    double maxRadius = hypot(centerX, centerY);
-
-    var currentRadius = waveRadius;
-    while (currentRadius < maxRadius) {
-      canvas.drawCircle(Offset(centerX, centerY), currentRadius, wavePaint);
-      currentRadius += 10.0;
-    }
+    var rect = Offset.zero & size;
+    var gradient = RadialGradient(
+      center: const Alignment(0.7, -0.6),
+      radius: 0.7,
+      colors: [const Color(0xFFFFFF00), const Color(0xFF0079FF)],
+      stops: [0.4, 1.0],
+    );
+    canvas.drawRect(
+      rect,
+      Paint()..shader = gradient.createShader(rect),
+    );
   }
 
   @override
-  bool shouldRepaint(CircleWavePainter oldDelegate) {
-    return oldDelegate.waveRadius != waveRadius;
+  SemanticsBuilderCallback get semanticsBuilder {
+    return (Size size) {
+      // Annotate a rectangle containing the picture of the sun
+      // with the label "Sun". When text to speech feature is enabled on the
+      // device, a user will be able to locate the sun on this picture by
+      // touch.
+      var rect = Offset.zero & size;
+      var width = size.shortestSide * 0.4;
+      rect = const Alignment(0.8, -0.9).inscribe(Size(width, width), rect);
+      return [
+        CustomPainterSemantics(
+          rect: rect,
+          properties: SemanticsProperties(
+            label: 'Sun',
+            textDirection: TextDirection.ltr,
+          ),
+        ),
+      ];
+    };
   }
 
-  double hypot(double x, double y) {
-    return math.sqrt(x * x + y * y);
-  }
+  // Since this Sky painter has no fields, it always paints
+  // the same thing and semantics information is the same.
+  // Therefore we return false here. If we had fields (set
+  // from the constructor) then we would return true if any
+  // of them differed from the same fields on the oldDelegate.
+  @override
+  bool shouldRepaint(Sky oldDelegate) => false;
+  @override
+  bool shouldRebuildSemantics(Sky oldDelegate) => false;
 }
