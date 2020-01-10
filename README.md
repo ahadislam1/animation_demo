@@ -1,6 +1,6 @@
 # animation_demo
 
-A new Flutter project.
+Demoing animations and how they work in flutter widgets.
 
 ## Getting Started
 
